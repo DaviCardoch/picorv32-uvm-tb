@@ -60,42 +60,55 @@ RAM de dados vs. registrador emulado de RF:
 | `0x1000_000C` em diante      | —       | Reservado (ex.: RSSI, ID de antena, se algum dia entrar no escopo) | Não implementado ainda |
 | Qualquer outro endereço     | —       | Acesso fora do mapa conhecido                   | Tratar como erro/flag no scoreboard (útil como checagem extra, não estava nas metas originais) |
 
-Esse mapa é um ponto de partida, não algo já fechado com o orientador — faz
-sentido revisar (endereços, largura dos campos, se `PKT_STATUS` deveria
-existir desde já) junto com a implementação real da Fase B, e só depois
-espelhar no capítulo de metodologia caso vire de fato a decisão adotada.
-
-Esse mapa de endereços ainda não está no capítulo 3 nem foi discutido; é uma
-decisão de design da Fase B (Memory Agent), não uma decisão editorial do
-texto.
+Esse mapa é um ponto de partida, não algo já fechado com o orientador nem
+com o capítulo 3 da monografia — faz sentido revisar (endereços, largura dos
+campos, se `PKT_STATUS` deveria existir desde já) junto com a implementação
+real da Fase B, e só depois espelhar no capítulo de metodologia caso vire de
+fato a decisão adotada.
 
 ## 2. Ambiente (WSL + Rocky Linux + VCS/Verdi)
 
-Antes de escrever UVM, validar a base:
+**Status: validado em 2026-08-28.** VCS X-2025.06-SP2 e Verdi X-2025.06-SP2
+instalados em `/opt/synopsys/`, `VCS_HOME`/`VERDI_HOME` setados, licença via
+`LM_LICENSE_FILE=<porta>@<servidor>` (servidor de licenças da instituição) respondendo normalmente
+(`vcs -full64 -help` roda sem erro de licença). Toolchain cruzado RISC-V
+(`binutils-riscv64-linux-gnu`, `gcc-riscv64-linux-gnu`, alvo `rv32i`/`ilp32`)
+instalado via `dnf` para montar firmware de teste sem precisar calcular
+opcodes na mão.
 
-1. Confirmar licença acessível (`LM_LICENSE_FILE` ou servidor) e
-   `vcs -full64 -help` rodando sem erro dentro do WSL.
+Itens ainda pendentes da checklist original:
+
+1. ~~Licença/`vcs -full64 -help`~~ — feito.
 2. Confirmar qual biblioteca UVM vem empacotada com a versão de VCS
    (`$VCS_HOME/etc/uvm-1.2` ou similar) — define se compila com
-   `-ntb_opts uvm-1.2` ou aponta pro `UVM_HOME` manualmente.
+   `-ntb_opts uvm-1.2` ou aponta pro `UVM_HOME` manualmente. Só entra de
+   fato na Fase B (primeiro código UVM).
 3. Rodar um "hello world" SystemVerilog/UVM trivial (um `uvm_test` que só
    imprime `uvm_info` e termina) pra confirmar que compilação
    (`vcs -sverilog ...`) e simulação (`./simv +UVM_TESTNAME=...`) fecham o
-   ciclo antes de tocar no PicoRV32.
-4. Puxar o PicoRV32 (`github.com/YosysHQ/picorv32`) e compilar **sozinho, sem
-   testbench UVM**, com um wrapper simples (`mem_ready` sempre alto, memória
-   associativa simples) só pra confirmar que o core em si simula e executa
-   um programa trivial. Isso separa bugs de "ambiente/DUT" de bugs de
-   "testbench".
+   ciclo antes de tocar no PicoRV32. Também Fase B.
+4. ~~Compilar o PicoRV32 sozinho, sem testbench UVM~~ — feito na Fase A
+   (ver abaixo).
 
 ## 3. Fases de implementação
 
-**Fase A — Bring-up passivo (sem UVM ainda)**
+**Fase A — Bring-up passivo (sem UVM ainda) — CONCLUÍDA em 2026-08-28**
 Wrapper SV simples + memória de instrução pré-carregada rodando um
 programinha (soma, loop, `ecall`) direto no VCS, visualizando em Verdi.
 Objetivo: confirmar que dá pra carregar firmware na memória do testbench e
 ler waveform do handshake `mem_valid`/`mem_ready` já documentado na figura de
 handshake do capítulo 3 da monografia.
+
+Implementado em `fw/phaseA_smoke.S` (RV32I puro, monta com o toolchain
+`riscv64-linux-gnu-{as,ld,objcopy}` via `fw/Makefile`) e `sim/tb_phaseA.sv`
+(instancia o `picorv32` nativo direto do submódulo, com memória de
+instrução/dados seguindo `tb/interfaces/mem_map.svh` e 1 ciclo de espera por
+transação, batendo com a Figura 3.2). Rodar com `sim/run_phaseA.sh`.
+Resultado validado no VCS X-2025.06-SP2: soma 1+2+3+4+5 = 15 corretamente
+gravada e relida na RAM de dados, `ecall` dispara `trap` e encerra a
+simulação como esperado. Waveform (`tb_phaseA.vcd`) pronta pra abrir no
+Verdi (`verdi -ssf tb_phaseA.vcd`), ainda não inspecionada visualmente por
+Davi.
 
 **Fase B — Interfaces e Memory Agent mínimo**
 - `mem_if` (interface SV com clocking block) para os sinais `mem_*`.
@@ -141,6 +154,9 @@ TCC2.
 
 ## Próximo passo concreto
 
-Começar pela **Fase A** (bring-up do PicoRV32 sozinho, sem UVM): rápido,
-valida o ambiente VCS/Verdi de ponta a ponta, e evita descobrir problemas de
-licença/toolchain só depois de já ter escrito agents inteiros.
+Fase A concluída. Antes de partir pra Fase B (Memory Agent UVM real), vale
+Davi abrir `sim/tb_phaseA.vcd` no Verdi pra conferir visualmente o handshake
+`mem_valid`/`mem_ready` contra a Figura 3.2 — é rápido e serve como primeiro
+contato com o Verdi neste projeto. Depois disso, a Fase B começa por
+descobrir a biblioteca UVM empacotada no VCS (item 2 pendente da seção 2) e
+só então escrever a primeira transação/sequencer/driver do Memory Agent.
