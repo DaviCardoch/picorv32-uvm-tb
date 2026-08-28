@@ -27,28 +27,32 @@ picorv32-uvm-tb/
 
 ## 1. Decisão de projeto a resolver antes de codificar
 
-O PicoRV32 usa **um único barramento** para busca de instrução e acesso a
-dados, diferenciado só pelo sinal `mem_instr`. Isso significa que o Memory
-Agent não pode simplesmente randomizar toda resposta em `mem_rdata`: se ele
-responder lixo também nos fetches de instrução (`mem_instr=1`), o núcleo
-executa opcodes inválidos e trava/gera exceção quase imediatamente, sem nunca
-chegar nos cenários de Tag ID/CRC que são o objetivo real (OBJ-01/OBJ-02).
+**Parte já decidida (Figura 3.2 / texto da Seção 3.2):** o PicoRV32 usa um
+único barramento para busca de instrução e acesso a dados, diferenciado pelo
+sinal `mem_instr`. O próprio texto que acompanha a Figura 3.2 já trata a
+leitura do Tag ID como um acesso de dado (`mem_instr = 0`, "já que nenhuma
+das duas é uma busca de instrução"), distinto de uma busca de instrução
+(`mem_instr = 1`). Isso não precisa ser redecidido: instruções não devem vir
+de dados aleatórios, senão o núcleo executa opcodes inválidos e trava antes
+de chegar nos cenários de Tag ID/CRC (OBJ-01/OBJ-02).
 
-Ou seja, o driver do Memory Agent precisa, na prática, de **duas políticas de
-resposta**:
+**Parte ainda em aberto:** dentro do próprio barramento de dados
+(`mem_instr = 0`), nem todo acesso é um pacote de Tag ID/CRC. Um programa
+RV32I real também usa a memória de dados para pilha (push/pop de `ra`,
+variáveis locais) e essas respostas precisam continuar coerentes, senão o
+núcleo corrompe a pilha e trava antes de qualquer cenário relevante. Ou seja,
+falta definir um **mapa de endereços** para o Memory Agent, por exemplo:
 
-- `mem_instr = 1` → serve instruções válidas de um programa RV32I real
-  pré-carregado (um "firmware" mínimo compilado com o `riscv-gnu-toolchain`
-  ou escrito à mão em assembly), para o núcleo ter algo coerente pra
-  executar;
-- `mem_instr = 0` → é onde entra a emulação do restante do transponder: aqui
-  sim o driver injeta os pacotes com Tag ID/CRC (válidos, corrompidos etc.)
-  conforme as sequences constrained-random.
+- uma faixa de endereço fixa == "registrador" de Tag ID / status de CRC
+  recebido do front-end RF emulado → aqui entra a randomização/corrupção
+  conforme as sequences (OBJ-01/OBJ-02);
+- resto do espaço de endereço == RAM de dados normal do firmware (pilha,
+  variáveis) → aqui a resposta precisa ser bem comportada (memória
+  associativa simples que devolve o que foi escrito), não aleatória.
 
-Vale decidir isso logo e, se fizer sentido, registrar essa distinção
-explicitamente na Seção 3.3 do capítulo de metodologia da monografia (é uma
-consequência direta do protocolo que já está descrito lá, só não está
-explicitado ainda).
+Esse mapa de endereços ainda não está no capítulo 3 nem foi discutido; é uma
+decisão de design da Fase B (Memory Agent), não uma decisão editorial do
+texto.
 
 ## 2. Ambiente (WSL + Rocky Linux + VCS/Verdi)
 
