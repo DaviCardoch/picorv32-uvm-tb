@@ -13,7 +13,7 @@ repositório da monografia. Estrutura inicial:
 
 ```
 picorv32-uvm-tb/
-├── rtl/            # PicoRV32 (submódulo git do repo oficial cliffordwolf/picorv32)
+├── rtl/picorv32/   # submódulo git de github.com/YosysHQ/picorv32, pinado em a473fc8 (ISC License)
 ├── tb/
 │   ├── interfaces/ # mem_if.sv, irq_if.sv
 │   ├── agents/     # memory_agent/, irq_agent/
