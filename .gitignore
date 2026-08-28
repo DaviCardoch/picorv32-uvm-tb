@@ -1,0 +1,20 @@
+# artefatos de build do firmware (Makefile em fw/ regenera)
+fw/*.o
+fw/*.elf
+fw/*.bin
+fw/firmware.hex
+
+# artefatos de simulacao VCS/Verdi
+sim/csrc/
+sim/*.daidir/
+sim/simv*
+sim/*.log
+sim/*.vcd
+sim/*.fsdb
+sim/*.vpd
+sim/ucli.key
+sim/DVEfiles/
+sim/verdiLog/
+sim/novas.*
+sim/*.vdb/
+sim/urg_report/
