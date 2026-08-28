@@ -41,14 +41,29 @@ de chegar nos cenários de Tag ID/CRC (OBJ-01/OBJ-02).
 RV32I real também usa a memória de dados para pilha (push/pop de `ra`,
 variáveis locais) e essas respostas precisam continuar coerentes, senão o
 núcleo corrompe a pilha e trava antes de qualquer cenário relevante. Ou seja,
-falta definir um **mapa de endereços** para o Memory Agent, por exemplo:
+falta definir um **mapa de endereços** para o Memory Agent.
 
-- uma faixa de endereço fixa == "registrador" de Tag ID / status de CRC
-  recebido do front-end RF emulado → aqui entra a randomização/corrupção
-  conforme as sequences (OBJ-01/OBJ-02);
-- resto do espaço de endereço == RAM de dados normal do firmware (pilha,
-  variáveis) → aqui a resposta precisa ser bem comportada (memória
-  associativa simples que devolve o que foi escrito), não aleatória.
+### 1.1 Mapa de endereços proposto (rascunho, a validar na Fase B)
+
+O IRQ do PicoRV32 **não** passa pelo barramento de memória (é a porta
+dedicada `irq[31:0]` + instruções customizadas `getq`/`setq`/`maskirq`/
+`waitirq`/`retirq`), então o mapa abaixo só precisa resolver instrução vs.
+RAM de dados vs. registrador emulado de RF:
+
+| Faixa de endereço          | Tamanho | Uso                                            | Política de resposta do Memory Agent |
+|-----------------------------|---------|-------------------------------------------------|----------------------------------------|
+| `0x0000_0000`–`0x0000_3FFF` | 16 KB   | Memória de instrução (`mem_instr=1`)            | Sempre serve o firmware real pré-carregado (Fase A/B) |
+| `0x0001_0000`–`0x0001_3FFF` | 16 KB   | RAM de dados (pilha crescendo de cima pra baixo, `.data`/`.bss`) | Memória associativa simples: devolve o que foi escrito antes; nunca randomizada |
+| `0x1000_0000`               | 4 B     | `TAG_ID` — identificador do piloto recebido (somente leitura do ponto de vista do núcleo) | Valor vem da sequence ativa (OBJ-01: faixa completa, incluindo extremos) |
+| `0x1000_0004`               | 4 B     | `CRC_STATUS` — resultado da checagem de CRC do pacote recebido | Codificado pela sequence: `0`=válido, `1`=inválido em 1 bit, `2`=inválido em múltiplos bits (bate direto com OBJ-02) |
+| `0x1000_0008`               | 4 B     | `PKT_STATUS` — flag de "novo pacote disponível" (reservado; pode nascer fixo em 1 na Fase B e virar dinâmico depois) | Fase B: constante; depois pode variar por sequence |
+| `0x1000_000C` em diante      | —       | Reservado (ex.: RSSI, ID de antena, se algum dia entrar no escopo) | Não implementado ainda |
+| Qualquer outro endereço     | —       | Acesso fora do mapa conhecido                   | Tratar como erro/flag no scoreboard (útil como checagem extra, não estava nas metas originais) |
+
+Esse mapa é um ponto de partida, não algo já fechado com o orientador — faz
+sentido revisar (endereços, largura dos campos, se `PKT_STATUS` deveria
+existir desde já) junto com a implementação real da Fase B, e só depois
+espelhar no capítulo de metodologia caso vire de fato a decisão adotada.
 
 Esse mapa de endereços ainda não está no capítulo 3 nem foi discutido; é uma
 decisão de design da Fase B (Memory Agent), não uma decisão editorial do
