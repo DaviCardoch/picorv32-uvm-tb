@@ -18,13 +18,25 @@ localparam int unsigned DATA_MEM_SIZE   = 32'h0000_4000; // 16 KB
 // do ponto de vista do nucleo.
 localparam int unsigned RF_REGS_BASE    = 32'h1000_0000;
 
-localparam int unsigned ADDR_TAG_ID     = RF_REGS_BASE + 32'h0; // OBJ-01
-localparam int unsigned ADDR_CRC_STATUS = RF_REGS_BASE + 32'h4; // OBJ-02
-localparam int unsigned ADDR_PKT_STATUS = RF_REGS_BASE + 32'h8; // reservado, Fase B: constante
+localparam int unsigned ADDR_TAG_ID     = RF_REGS_BASE + 32'h0; // OBJ-01 (leitura)
+localparam int unsigned ADDR_CRC_STATUS = RF_REGS_BASE + 32'h4; // OBJ-02 (leitura)
+localparam int unsigned ADDR_PKT_STATUS = RF_REGS_BASE + 32'h8; // 1 = novo pacote disponivel (leitura)
+
+// Registradores de resultado, escritos pelo firmware apos processar cada
+// pacote (decisao da Fase B): dao ao scoreboard uma saida observavel para
+// comparar com o modelo de referencia (aceita se CRC valido, rejeita caso
+// contrario), fechando a checagem fim-a-fim atraves do software executado
+// pelo nucleo.
+localparam int unsigned ADDR_RESULT_TAG    = RF_REGS_BASE + 32'hC;  // tag processada (escrita)
+localparam int unsigned ADDR_RESULT_STATUS = RF_REGS_BASE + 32'h10; // veredito (escrita)
 
 // Codificacao de CRC_STATUS (bate com o coverpoint de validade de CRC, OBJ-02).
 localparam int unsigned CRC_VALID           = 32'd0;
 localparam int unsigned CRC_INVALID_1BIT    = 32'd1;
 localparam int unsigned CRC_INVALID_MULTIBIT= 32'd2;
+
+// Codificacao de RESULT_STATUS escrita pelo firmware.
+localparam int unsigned RESULT_ACCEPT = 32'd1;
+localparam int unsigned RESULT_REJECT = 32'd2;
 
 `endif // MEM_MAP_SVH

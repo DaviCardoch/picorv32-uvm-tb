@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "== montando firmware =="
-make -C ../fw
+make -C ../fw phaseA_smoke.hex firmware.hex
 
 echo "== compilando no VCS =="
 vcs -full64 -sverilog \
