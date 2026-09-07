@@ -2,7 +2,7 @@
 fw/*.o
 fw/*.elf
 fw/*.bin
-fw/firmware.hex
+fw/*.hex
 
 # artefatos de simulacao VCS/Verdi
 sim/csrc/
@@ -18,3 +18,7 @@ sim/verdiLog/
 sim/novas.*
 sim/*.vdb/
 sim/urg_report/
+sim/vc_hdrs.h
+sim/vfastLog/
+sim/*.conf
+sim/*.rc
