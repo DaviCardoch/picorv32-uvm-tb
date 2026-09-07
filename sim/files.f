@@ -17,6 +17,7 @@
 ../tb/tests/tb_test_pkg.sv
 
 ../tb/sva/irq_eoi_checker.sv
+../tb/sva/mem_protocol_checker.sv
 ../tb/sva/tb_bind.sv
 
 ../tb/tb_top.sv

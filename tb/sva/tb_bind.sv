@@ -12,3 +12,14 @@ bind picorv32 irq_eoi_checker #(
     .mem_rdata(mem_rdata),
     .eoi      (eoi)
 );
+
+bind picorv32 mem_protocol_checker u_mem_proto_chk (
+    .clk      (clk),
+    .resetn   (resetn),
+    .mem_valid(mem_valid),
+    .mem_ready(mem_ready),
+    .mem_instr(mem_instr),
+    .mem_addr (mem_addr),
+    .mem_wdata(mem_wdata),
+    .mem_wstrb(mem_wstrb)
+);

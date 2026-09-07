@@ -12,7 +12,7 @@ cd "$(dirname "$0")"
 TEST="${1:-rf_smoke_test}"
 shift || true
 
-CM="line+cond+branch+tgl"
+CM="line+cond+branch+tgl+assert"
 
 echo "== montando firmware =="
 make -C ../fw uvm_fw.hex

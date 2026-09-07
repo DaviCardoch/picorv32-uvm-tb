@@ -87,4 +87,19 @@ module tb_top;
         end
     end
 
+    // Injecao proposital de violacao de protocolo (+inject_proto_err), para
+    // demonstrar que o checker SVA do OBJ-06 detecta o erro de fato (a
+    // simulacao DEVE terminar com UVM_ERROR nesse modo; nao faz parte da
+    // regressao normal).
+    initial begin
+        if ($test$plusargs("inject_proto_err")) begin
+            wait (resetn);
+            // espera uma busca de instrucao em andamento e forca wstrb
+            @(posedge clk iff (mif.mem_valid && mif.mem_instr));
+            force dut.mem_wstrb = 4'b1111;
+            repeat (2) @(posedge clk);
+            release dut.mem_wstrb;
+        end
+    end
+
 endmodule : tb_top
