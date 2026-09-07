@@ -110,53 +110,63 @@ simulação como esperado. Waveform (`tb_phaseA.vcd`) pronta pra abrir no
 Verdi (`verdi -ssf tb_phaseA.vcd`), ainda não inspecionada visualmente por
 Davi.
 
-**Fase B — Interfaces e Memory Agent mínimo**
-- `mem_if` (interface SV com clocking block) para os sinais `mem_*`.
-- Transação (`uvm_sequence_item`) representando uma resposta de memória
-  (instrução válida vs. pacote de dado com Tag ID/CRC).
-- Driver, sequencer, monitor do Memory Agent, aplicando a distinção
-  instrução/dado da Seção 1.
-- Um teste dirigido (não random ainda): sobe o núcleo, ele busca algumas
-  instruções, faz uma leitura de "Tag ID" com CRC válido. Rodar em VCS,
-  depurar em Verdi (waveform + navegador de hierarquia UVM).
+**Fase B — Interfaces e Memory Agent mínimo — CONCLUÍDA em 2026-09-07**
+Interfaces `mem_if`/`irq_if`, Memory Agent completo com driver **reativo**
+(o DUT é o mestre do barramento: o driver responde como escravo, com três
+políticas conforme o mapa da Seção 1.1) e teste dirigido `rf_smoke_test`
+(4 pacotes: extremos de tag + os 3 estados de CRC). Decisões tomadas nesta
+fase: registradores de resultado `RESULT_TAG`/`RESULT_STATUS` no mapa (dão
+ao scoreboard uma saída observável fim-a-fim através do software executado
+pelo núcleo) e firmware `fw/uvm_fw.S` em loop eterno de polling (quem
+encerra o teste é a objection UVM, não o firmware). Validada no VCS: os 4
+pacotes processados corretamente, 0 UVM_ERROR.
 
-**Fase C — Scoreboard mínimo + primeiro coverpoint**
-Scoreboard que apenas confere que toda transação de leitura observada pelo
-monitor bate com o que o driver decidiu enviar (checagem passiva simples).
-Adicionar o `covergroup` de faixa de Tag ID (OBJ-01) e rodar cobertura pela
-primeira vez (`urg`/Verdi coverage) — mesmo que baixa, serve pra validar que
-o pipeline de coverage database está funcionando.
+**Fase C — Scoreboard + cobertura + urg — CONCLUÍDA em 2026-09-07**
+`tb_scoreboard` passivo (modelo de referência montado só do tráfego do
+monitor) e `tb_coverage` com OBJ-01/02/03 + cruzamento tag×CRC. Fluxo
+`urg` com cobertura de código restrita ao DUT (`cm_hier.cfg`), relatório
+HTML em `sim/urg_report/`. Validada: 4 pacotes OK / 0 divergências.
 
-**Fase D — IRQ Agent**
-Repetir o padrão da Fase B/C para interrupções: sequencer/driver/monitor de
-IRQ, teste dirigido levantando uma IRQ e checando a assertiva de EOI
-(OBJ-07) — boa candidata a já nascer em SVA (`bind` no DUT) em vez de
-checagem em SystemVerilog puro no scoreboard.
+**Fase D — IRQ Agent — CONCLUÍDA em 2026-09-07**
+IRQ Agent completo (pulso de 1 ciclo, serializado pelo ciclo de EOI),
+handler de interrupção real no firmware (salva contexto em q2/q3, publica
+o bitmask q1 no novo registrador `IRQ_ACK`, retorna com `retirq`),
+scoreboard casando cada pulso com o reconhecimento, `cg_irq` com 32 bins
+(OBJ-04) e o checker SVA de EOI via `bind` (OBJ-07, ancorado na busca da
+codificação 0x0400000B de retirq). Validada: 3 IRQs dirigidas (linhas 3,
+0, 31) com ciclo completo, SVAs com antecedente real, 0 erros.
 
-**Fase E — Sequences constrained-random + cobertura cruzada**
-Sequences que geram Tag ID em toda a faixa (incluindo extremos), CRC
-válido/inválido (1 bit vs. múltiplos bits), e tipos de instrução variados.
-Cross coverage IRQ × tipo de instrução e CRC × Tag ID (OBJ-05). Se a
-ordenação entre os dois sequencers precisar ser coordenada (ex.: IRQ
-chegando no meio de uma leitura), entra a sequência virtual mencionada no
-capítulo 2 da monografia.
+**Fase E — Constrained-random + sequência virtual — CONCLUÍDA em 2026-09-07**
+Distribuição ponderada de tag (extremos com peso explícito), janela "IRQ
+ativa" cruzada com formato de instrução (completa OBJ-05), sequencer
+virtual `tb_vseqr` + `mixed_rand_vseq` rodando pacotes e IRQs em paralelo,
+teste `mixed_rand_test` configurável por plusargs. Validada: 30 pacotes +
+20 IRQs random, 0 divergências.
 
-**Fase F — Assertivas de barramento (OBJ-06)**
-Estabilidade de `mem_valid`/`mem_addr` até o handshake, ausência de
-`mem_wstrb` ativo com `mem_instr` alto — direto em SVA, bindado no DUT,
-checável isoladamente até com testes dirigidos da Fase B.
+**Fase F — Assertivas de barramento (OBJ-06) — CONCLUÍDA em 2026-09-07**
+`mem_protocol_checker` via `bind`: estabilidade de valid/addr/controle até
+o handshake e exclusão mútua escrita×fetch. Validada nos dois sentidos:
+tráfego limpo passa (0 erros) e injeção proposital de erro
+(`+inject_proto_err` força wstrb durante fetch) dispara as assertivas.
 
-**Fase G — Regressão e fechamento de cobertura**
-Rodar a suíte completa em regressão, usar o coverage browser do Verdi pra
-achar buracos, ajustar constraints/pesos das sequences, iterar até bater um
-critério de cobertura razoável para reportar no capítulo 4 (Análise) do
-TCC2.
+**Fase G — Regressão e fechamento — CONCLUÍDA em 2026-09-07**
+`sim/run_regress.sh`: 2 dirigidos + 3 seeds do random (200 pacotes, 243
+IRQs). Resultado: **todos os testes PASS, cobertura funcional consolidada
+100%** (OBJ-01..05 fechados), assertivas com sucessos não-vacuosos e 0
+falhas (OBJ-06/07). Cobertura de código do DUT: linha ~60%, cond ~55%,
+toggle ~66%, branch ~49%.
 
-## Próximo passo concreto
+## Próximos passos (pós Fase G)
 
-Fase A concluída. Antes de partir pra Fase B (Memory Agent UVM real), vale
-Davi abrir `sim/tb_phaseA.vcd` no Verdi pra conferir visualmente o handshake
-`mem_valid`/`mem_ready` contra a Figura 3.2 — é rápido e serve como primeiro
-contato com o Verdi neste projeto. Depois disso, a Fase B começa por
-descobrir a biblioteca UVM empacotada no VCS (item 2 pendente da seção 2) e
-só então escrever a primeira transação/sequencer/driver do Memory Agent.
+1. **Análise de exclusões de cobertura de código** com o orientador: os
+   buracos concentram-se em lógica desabilitada por configuração do core
+   (ENABLE_MUL/DIV=0, COMPRESSED_ISA=0, trace, PCPI); escrever exclusões
+   justificadas e recalcular o score é a discussão natural do capítulo 4
+   (Análise) do TCC2.
+2. **Figuras para a monografia**: waveforms no Verdi (handshake, ciclo de
+   IRQ/EOI) e prints do relatório urg; ver a pendência de GUI do Verdi
+   (WSLg/VcXsrv) nas notas do projeto.
+3. Possíveis extensões (bônus): disparo *interno* real das IRQs 0..2
+   (temporizador via instrução `timer`, instrução ilegal, acesso
+   desalinhado), atrasos aleatórios de mem_ready no driver (wait states
+   variáveis), mais seeds na regressão.

@@ -21,6 +21,7 @@ echo "== compilando no VCS (UVM 1.2) =="
 vcs -full64 -sverilog -ntb_opts uvm-1.2 \
     -timescale=1ns/1ps \
     -f files.f \
+    -top tb_top \
     -o simv_uvm \
     -debug_access+all \
     -cm ${CM} -cm_hier cm_hier.cfg \
