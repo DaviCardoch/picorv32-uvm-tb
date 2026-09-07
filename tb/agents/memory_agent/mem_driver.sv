@@ -119,6 +119,9 @@ class mem_driver extends uvm_driver #(rf_pkt_item);
             if (pkt_active)
                 ->pkt_done_ev;   // firmware concluiu o pacote corrente
         end
+        else if (addr == ADDR_IRQ_ACK && vif.mem_wstrb != 4'b0000) begin
+            vif.mem_ready <= 1'b1;   // reconhecimento de IRQ pelo handler
+        end
         // 4. fora do mapa conhecido
         else begin
             `uvm_error("MAPA", $sformatf(

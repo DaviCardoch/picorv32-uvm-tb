@@ -11,8 +11,12 @@
 ../tb/interfaces/irq_if.sv
 
 ../tb/agents/memory_agent/mem_agent_pkg.sv
+../tb/agents/irq_agent/irq_agent_pkg.sv
 ../tb/seq/tb_seq_pkg.sv
 ../tb/env/tb_env_pkg.sv
 ../tb/tests/tb_test_pkg.sv
+
+../tb/sva/irq_eoi_checker.sv
+../tb/sva/tb_bind.sv
 
 ../tb/tb_top.sv

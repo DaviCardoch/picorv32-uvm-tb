@@ -12,6 +12,7 @@ class tb_coverage extends uvm_component;
     `uvm_component_utils(tb_coverage)
 
     uvm_analysis_imp_mem #(mem_txn, tb_coverage) mem_imp;
+    uvm_analysis_imp_irq #(irq_txn, tb_coverage) irq_imp;
 
     // valores do pacote corrente (amostrados na conclusao do pacote)
     protected bit [31:0] pkt_tag;
@@ -19,6 +20,9 @@ class tb_coverage extends uvm_component;
 
     // formato da instrucao buscada corrente
     protected rv_fmt_e fmt;
+
+    // linha da IRQ pulsada corrente
+    protected int unsigned irq_linha;
 
     // OBJ-01 / OBJ-02 / OBJ-05: amostrado a cada pacote concluido
     // (escrita de RESULT_STATUS), quando tag e crc sao conhecidos
@@ -53,11 +57,29 @@ class tb_coverage extends uvm_component;
         }
     endgroup
 
+    // OBJ-04: as 32 linhas de IRQ (as linhas 0..2 sao tambem as fontes
+    // internas do PicoRV32: temporizador, instrucao ilegal, erro de barramento)
+    covergroup cg_irq;
+        option.per_instance = 1;
+        cp_linha: coverpoint irq_linha {
+            bins linha[] = {[0:31]};
+        }
+    endgroup
+
     function new(string name, uvm_component parent);
         super.new(name, parent);
         mem_imp  = new("mem_imp", this);
+        irq_imp  = new("irq_imp", this);
         cg_pkt   = new();
         cg_instr = new();
+        cg_irq   = new();
+    endfunction
+
+    function void write_irq(irq_txn t);
+        if (t.kind == IRQ_PULSE) begin
+            irq_linha = t.line;
+            cg_irq.sample();
+        end
     endfunction
 
     function void write_mem(mem_txn t);
@@ -79,12 +101,13 @@ class tb_coverage extends uvm_component;
     function void report_phase(uvm_phase phase);
         super.report_phase(phase);
         `uvm_info("COV", $sformatf(
-            "cobertura funcional: cg_pkt=%.1f%% (tag=%.1f%% crc=%.1f%% cruz=%.1f%%) cg_instr=%.1f%%",
+            "cobertura funcional: cg_pkt=%.1f%% (tag=%.1f%% crc=%.1f%% cruz=%.1f%%) cg_instr=%.1f%% cg_irq=%.1f%%",
             cg_pkt.get_inst_coverage(),
             cg_pkt.cp_tag.get_inst_coverage(),
             cg_pkt.cp_crc.get_inst_coverage(),
             cg_pkt.x_tag_crc.get_inst_coverage(),
-            cg_instr.get_inst_coverage()), UVM_LOW)
+            cg_instr.get_inst_coverage(),
+            cg_irq.get_inst_coverage()), UVM_LOW)
     endfunction
 
 endclass : tb_coverage

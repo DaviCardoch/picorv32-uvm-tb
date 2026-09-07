@@ -6,6 +6,7 @@ class tb_env extends uvm_env;
     `uvm_component_utils(tb_env)
 
     mem_agent     m_mem_agent;
+    irq_agent     m_irq_agent;
     tb_scoreboard m_scoreboard;
     tb_coverage   m_coverage;
 
@@ -16,6 +17,7 @@ class tb_env extends uvm_env;
     function void build_phase(uvm_phase phase);
         super.build_phase(phase);
         m_mem_agent  = mem_agent::type_id::create("m_mem_agent", this);
+        m_irq_agent  = irq_agent::type_id::create("m_irq_agent", this);
         m_scoreboard = tb_scoreboard::type_id::create("m_scoreboard", this);
         m_coverage   = tb_coverage::type_id::create("m_coverage", this);
     endfunction
@@ -24,6 +26,8 @@ class tb_env extends uvm_env;
         super.connect_phase(phase);
         m_mem_agent.m_monitor.ap.connect(m_scoreboard.mem_imp);
         m_mem_agent.m_monitor.ap.connect(m_coverage.mem_imp);
+        m_irq_agent.m_monitor.ap.connect(m_scoreboard.irq_imp);
+        m_irq_agent.m_monitor.ap.connect(m_coverage.irq_imp);
     endfunction
 
 endclass : tb_env

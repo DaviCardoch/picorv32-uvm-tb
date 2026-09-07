@@ -12,8 +12,10 @@ CC      := $(CROSS)gcc
 LD      := $(CROSS)ld
 OBJCOPY := $(CROSS)objcopy
 
-# .S passa pelo pre-processador C (gcc); rv32i puro, sem codigo de startup
-CFLAGS  := -march=rv32i -mabi=ilp32 -nostdlib -nostartfiles -c
+# .S passa pelo pre-processador C (gcc); rv32i puro, sem codigo de startup.
+# -I para as macros das instrucoes customizadas de IRQ do PicoRV32
+CFLAGS  := -march=rv32i -mabi=ilp32 -nostdlib -nostartfiles -c \
+           -I../rtl/picorv32/firmware
 LDFLAGS := -m elf32lriscv -T link.ld
 
 # INSTR_MEM_SIZE = 16 KB (tb/interfaces/mem_map.svh) => 4096 palavras de 32 bits

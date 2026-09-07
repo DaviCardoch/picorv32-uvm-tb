@@ -11,12 +11,14 @@
 // corretamente (ou que o protocolo de barramento corrompeu dados).
 
 `uvm_analysis_imp_decl(_mem)
+`uvm_analysis_imp_decl(_irq)
 
 class tb_scoreboard extends uvm_scoreboard;
 
     `uvm_component_utils(tb_scoreboard)
 
     uvm_analysis_imp_mem #(mem_txn, tb_scoreboard) mem_imp;
+    uvm_analysis_imp_irq #(irq_txn, tb_scoreboard) irq_imp;
 
     // estado do pacote corrente, montado a partir das leituras observadas
     protected bit [31:0] cur_tag;
@@ -24,12 +26,28 @@ class tb_scoreboard extends uvm_scoreboard;
     protected bit        have_tag;
     protected bit        have_crc;
 
+    // IRQs solicitadas pelo IRQ Agent e ainda nao reconhecidas pelo
+    // firmware via escrita em IRQ_ACK
+    protected bit [31:0] irq_pendentes;
+
     int unsigned n_pkts_ok;
+    int unsigned n_irqs_ok;
     int unsigned n_mismatch;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
         mem_imp = new("mem_imp", this);
+        irq_imp = new("irq_imp", this);
+    endfunction
+
+    // eventos da interface de interrupcao
+    function void write_irq(irq_txn t);
+        if (t.kind == IRQ_PULSE) begin
+            if (irq_pendentes[t.line])
+                `uvm_warning("SB", $sformatf(
+                    "linha %0d pulsada de novo antes do reconhecimento", t.line))
+            irq_pendentes[t.line] = 1;
+        end
     endfunction
 
     function void write_mem(mem_txn t);
@@ -82,14 +100,46 @@ class tb_scoreboard extends uvm_scoreboard;
                 have_tag = 0;
                 have_crc = 0;
             end
+            else if (t.addr == ADDR_IRQ_ACK) begin
+                // handler publicou o bitmask q1: cada bit deve corresponder
+                // a uma IRQ solicitada e ainda pendente
+                if (t.wdata == 32'h0) begin
+                    `uvm_error("SB", "IRQ_ACK escrito com bitmask vazio")
+                    n_mismatch++;
+                end
+                for (int i = 0; i < 32; i++) begin
+                    if (t.wdata[i]) begin
+                        if (irq_pendentes[i]) begin
+                            irq_pendentes[i] = 0;
+                            n_irqs_ok++;
+                            `uvm_info("SB", $sformatf(
+                                "IRQ linha %0d atendida (total ok: %0d)",
+                                i, n_irqs_ok), UVM_MEDIUM)
+                        end
+                        else begin
+                            `uvm_error("SB", $sformatf(
+                                "IRQ_ACK para linha %0d sem solicitacao pendente", i))
+                            n_mismatch++;
+                        end
+                    end
+                end
+            end
+        end
+    endfunction
+
+    function void check_phase(uvm_phase phase);
+        super.check_phase(phase);
+        if (irq_pendentes != 32'h0) begin
+            `uvm_error("SB", $sformatf(
+                "IRQs solicitadas e nunca atendidas: bitmask=0x%08x", irq_pendentes))
         end
     endfunction
 
     function void report_phase(uvm_phase phase);
         super.report_phase(phase);
         `uvm_info("SB", $sformatf(
-            "resumo: %0d pacotes verificados OK, %0d divergencias",
-            n_pkts_ok, n_mismatch), UVM_LOW)
+            "resumo: %0d pacotes OK, %0d IRQs atendidas OK, %0d divergencias",
+            n_pkts_ok, n_irqs_ok, n_mismatch), UVM_LOW)
     endfunction
 
 endclass : tb_scoreboard

@@ -30,6 +30,12 @@ localparam int unsigned ADDR_PKT_STATUS = RF_REGS_BASE + 32'h8; // 1 = novo paco
 localparam int unsigned ADDR_RESULT_TAG    = RF_REGS_BASE + 32'hC;  // tag processada (escrita)
 localparam int unsigned ADDR_RESULT_STATUS = RF_REGS_BASE + 32'h10; // veredito (escrita)
 
+// Registrador de reconhecimento de interrupcao (decisao da Fase D): o
+// handler de IRQ do firmware escreve aqui o bitmask q1 (IRQs atendidas
+// naquela invocacao), dando ao scoreboard a evidencia observavel de que
+// cada IRQ solicitada pelo IRQ Agent foi de fato atendida pelo nucleo.
+localparam int unsigned ADDR_IRQ_ACK = RF_REGS_BASE + 32'h14; // bitmask (escrita)
+
 // Codificacao de CRC_STATUS (bate com o coverpoint de validade de CRC, OBJ-02).
 localparam int unsigned CRC_VALID           = 32'd0;
 localparam int unsigned CRC_INVALID_1BIT    = 32'd1;
