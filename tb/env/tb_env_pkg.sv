@@ -10,6 +10,7 @@ package tb_env_pkg;
     `include "rv32_decode.svh"
     `include "tb_scoreboard.sv"
     `include "tb_coverage.sv"
+    `include "tb_vseqr.sv"
     `include "tb_env.sv"
 
 endpackage : tb_env_pkg

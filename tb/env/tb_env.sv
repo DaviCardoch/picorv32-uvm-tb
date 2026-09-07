@@ -9,6 +9,7 @@ class tb_env extends uvm_env;
     irq_agent     m_irq_agent;
     tb_scoreboard m_scoreboard;
     tb_coverage   m_coverage;
+    tb_vseqr      m_vseqr;
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -20,6 +21,7 @@ class tb_env extends uvm_env;
         m_irq_agent  = irq_agent::type_id::create("m_irq_agent", this);
         m_scoreboard = tb_scoreboard::type_id::create("m_scoreboard", this);
         m_coverage   = tb_coverage::type_id::create("m_coverage", this);
+        m_vseqr      = tb_vseqr::type_id::create("m_vseqr", this);
     endfunction
 
     function void connect_phase(uvm_phase phase);
@@ -28,6 +30,8 @@ class tb_env extends uvm_env;
         m_mem_agent.m_monitor.ap.connect(m_coverage.mem_imp);
         m_irq_agent.m_monitor.ap.connect(m_scoreboard.irq_imp);
         m_irq_agent.m_monitor.ap.connect(m_coverage.irq_imp);
+        m_vseqr.mem_seqr = m_mem_agent.m_sequencer;
+        m_vseqr.irq_seqr = m_irq_agent.m_sequencer;
     endfunction
 
 endclass : tb_env

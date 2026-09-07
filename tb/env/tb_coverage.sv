@@ -24,6 +24,10 @@ class tb_coverage extends uvm_component;
     // linha da IRQ pulsada corrente
     protected int unsigned irq_linha;
 
+    // 1 entre a solicitacao de IRQ e a queda de EOI: janela em que ha
+    // concorrencia entre execucao/acesso a memoria e interrupcao (OBJ-05)
+    protected bit irq_ativa;
+
     // OBJ-01 / OBJ-02 / OBJ-05: amostrado a cada pacote concluido
     // (escrita de RESULT_STATUS), quando tag e crc sao conhecidos
     covergroup cg_pkt;
@@ -43,7 +47,10 @@ class tb_coverage extends uvm_component;
         x_tag_crc: cross cp_tag, cp_crc;
     endgroup
 
-    // OBJ-03: amostrado a cada busca de instrucao
+    // OBJ-03 + OBJ-05: amostrado a cada busca de instrucao; o cruzamento
+    // formato x IRQ ativa cobre os cenarios de concorrencia entre execucao
+    // e interrupcao (so fecha quando IRQs chegam enquanto pacotes estao
+    // sendo processados, o que motiva a sequencia virtual da Fase E)
     covergroup cg_instr;
         option.per_instance = 1;
         cp_fmt: coverpoint fmt {
@@ -55,6 +62,11 @@ class tb_coverage extends uvm_component;
             bins J      = {FMT_J};
             bins CUSTOM = {FMT_CUSTOM};
         }
+        cp_irq_ativa: coverpoint irq_ativa {
+            bins ocioso = {0};
+            bins ativa  = {1};
+        }
+        x_fmt_irq: cross cp_fmt, cp_irq_ativa;
     endgroup
 
     // OBJ-04: as 32 linhas de IRQ (as linhas 0..2 sao tambem as fontes
@@ -78,8 +90,11 @@ class tb_coverage extends uvm_component;
     function void write_irq(irq_txn t);
         if (t.kind == IRQ_PULSE) begin
             irq_linha = t.line;
+            irq_ativa = 1;
             cg_irq.sample();
         end
+        else if (t.kind == EOI_FALL)
+            irq_ativa = 0;
     endfunction
 
     function void write_mem(mem_txn t);
@@ -101,12 +116,13 @@ class tb_coverage extends uvm_component;
     function void report_phase(uvm_phase phase);
         super.report_phase(phase);
         `uvm_info("COV", $sformatf(
-            "cobertura funcional: cg_pkt=%.1f%% (tag=%.1f%% crc=%.1f%% cruz=%.1f%%) cg_instr=%.1f%% cg_irq=%.1f%%",
+            "cobertura funcional: cg_pkt=%.1f%% (tag=%.1f%% crc=%.1f%% cruz=%.1f%%) cg_instr=%.1f%% (fmt x irq=%.1f%%) cg_irq=%.1f%%",
             cg_pkt.get_inst_coverage(),
             cg_pkt.cp_tag.get_inst_coverage(),
             cg_pkt.cp_crc.get_inst_coverage(),
             cg_pkt.x_tag_crc.get_inst_coverage(),
             cg_instr.get_inst_coverage(),
+            cg_instr.x_fmt_irq.get_inst_coverage(),
             cg_irq.get_inst_coverage()), UVM_LOW)
     endfunction
 

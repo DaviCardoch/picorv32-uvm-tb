@@ -12,6 +12,19 @@ class rf_pkt_item extends uvm_sequence_item;
         crc_status inside {CRC_VALID, CRC_INVALID_1BIT, CRC_INVALID_MULTIBIT};
     }
 
+    // Distribuicao ponderada para OBJ-01: os dois valores extremos recebem
+    // peso explicito (um randomize uniforme em 32 bits quase nunca os
+    // sorteia), e as tres faixas intermediarias pesos equilibrados.
+    constraint c_tag_dist {
+        tag_id dist {
+            32'h0000_0000                     := 5,
+            32'hFFFF_FFFF                     := 5,
+            [32'h0000_0001 : 32'h0000_FFFF]   :/ 30,
+            [32'h0001_0000 : 32'hFFFE_FFFF]   :/ 30,
+            [32'hFFFF_0000 : 32'hFFFF_FFFE]   :/ 30
+        };
+    }
+
     `uvm_object_utils_begin(rf_pkt_item)
         `uvm_field_int(tag_id,     UVM_ALL_ON)
         `uvm_field_int(crc_status, UVM_ALL_ON)

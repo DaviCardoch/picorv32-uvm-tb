@@ -9,8 +9,11 @@ package tb_test_pkg;
     import tb_seq_pkg::*;
     import tb_env_pkg::*;
 
+    `include "vseq_lib.sv"
+
     `include "base_test.sv"
     `include "rf_smoke_test.sv"
     `include "irq_smoke_test.sv"
+    `include "mixed_rand_test.sv"
 
 endpackage : tb_test_pkg
