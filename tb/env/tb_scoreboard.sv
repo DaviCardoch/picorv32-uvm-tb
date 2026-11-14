@@ -25,6 +25,7 @@ class tb_scoreboard extends uvm_scoreboard;
     protected bit [31:0] cur_crc;
     protected bit        have_tag;
     protected bit        have_crc;
+    protected bit        have_result_tag;
 
     // IRQs solicitadas pelo IRQ Agent e ainda nao reconhecidas pelo
     // firmware via escrita em IRQ_ACK
@@ -65,6 +66,7 @@ class tb_scoreboard extends uvm_scoreboard;
         // escritas de resultado pelo firmware
         else if (t.is_write()) begin
             if (t.addr == ADDR_RESULT_TAG) begin
+                have_result_tag = 1;
                 if (!have_tag) begin
                     `uvm_error("SB", "RESULT_TAG escrito sem leitura previa de TAG_ID")
                     n_mismatch++;
@@ -80,6 +82,10 @@ class tb_scoreboard extends uvm_scoreboard;
                 bit [31:0] esperado;
                 if (!have_crc) begin
                     `uvm_error("SB", "RESULT_STATUS escrito sem leitura previa de CRC_STATUS")
+                    n_mismatch++;
+                end
+                else if (!have_result_tag) begin
+                    `uvm_error("SB", "RESULT_STATUS escrito sem escrita previa de RESULT_TAG")
                     n_mismatch++;
                 end
                 else begin
@@ -99,6 +105,7 @@ class tb_scoreboard extends uvm_scoreboard;
                 end
                 have_tag = 0;
                 have_crc = 0;
+                have_result_tag = 0;
             end
             else if (t.addr == ADDR_IRQ_ACK) begin
                 // handler publicou o bitmask q1: cada bit deve corresponder

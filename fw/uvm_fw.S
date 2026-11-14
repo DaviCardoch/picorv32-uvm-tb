@@ -1,5 +1,5 @@
 /*
- * Firmware do testbench UVM (Fase B em diante). Emula o software embarcado
+ * Firmware do testbench UVM . Emula o software embarcado
  * do transponder em nivel minimo: fica em polling no registrador PKT_STATUS
  * e, a cada pacote de RF anunciado pelo Memory Agent, le TAG_ID e
  * CRC_STATUS, decide aceitar (CRC valido) ou rejeitar, e escreve o veredito

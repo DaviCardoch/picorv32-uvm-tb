@@ -58,11 +58,26 @@ UVM_ERROR de proposito):
 
 ```sh
 ./simv_uvm +UVM_TESTNAME=rf_smoke_test +firmware=../fw/uvm_fw.hex +inject_proto_err
+./simv_uvm +UVM_TESTNAME=rf_smoke_test +firmware=../fw/uvm_fw.hex +inject_valid_err
+./simv_uvm +UVM_TESTNAME=rf_smoke_test +firmware=../fw/uvm_fw.hex +inject_addr_err
+```
+
+`+inject_proto_err` dispara `a_ctrl_estavel` e `a_sem_escrita_em_fetch`;
+`+inject_valid_err` dispara `a_valid_estavel`; `+inject_addr_err` dispara
+`a_addr_estavel`.
+
+Demonstracao de deteccao das assertivas de EOI, atrasando `eoi` na primeira
+interrupcao do teste (N=1 dispara `a_eoi_sobe` e N=4 dispara `a_eoi_encerra`;
+N=0 e N=3, respectivamente, ficam dentro do prazo e nao geram erro):
+
+```sh
+./simv_uvm +UVM_TESTNAME=irq_smoke_test +firmware=../fw/uvm_fw.hex +inject_eoi_sobe=1
+./simv_uvm +UVM_TESTNAME=irq_smoke_test +firmware=../fw/uvm_fw.hex +inject_eoi_encerra=4
 ```
 
 ## Estado (regressao de referencia)
 
-Suite: 2 dirigidos + 3 seeds do random misto (200 pacotes e 243 IRQs no
+Suite: 2 dirigidos + 3 seeds do random misto (204 pacotes e 243 IRQs no
 total). Resultado: todos os testes limpos, 0 divergencias de scoreboard,
 cobertura funcional consolidada 100% (todas as metas OBJ-01..05 fechadas;
 OBJ-06/07 via assertivas com sucessos nao-vacuosos e zero falhas).

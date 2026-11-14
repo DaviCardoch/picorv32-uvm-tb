@@ -9,7 +9,7 @@
 // ancoragem temporal.
 module irq_eoi_checker #(
     parameter bit [31:0] PROGADDR_IRQ = 32'h0000_0010,
-    parameter int unsigned MAX_CICLOS_EOI = 16
+    parameter int unsigned MAX_CICLOS_EOI = 4
 ) (
     input logic        clk,
     input logic        resetn,
@@ -42,7 +42,7 @@ module irq_eoi_checker #(
     // acompanhada da subida de EOI
     property p_eoi_sobe;
         @(posedge clk) disable iff (!resetn)
-        vec_fetch |-> ##[0:2] (eoi != 32'h0);
+        vec_fetch |-> ##[0:1] (eoi != 32'h0);
     endproperty
     a_eoi_sobe: assert property (p_eoi_sobe)
         else uvm_pkg::uvm_report_error("SVA",

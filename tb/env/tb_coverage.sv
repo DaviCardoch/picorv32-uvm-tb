@@ -4,7 +4,7 @@
 //   OBJ-01: faixa completa de Tag ID, incluindo extremos
 //   OBJ-02: validade de CRC (valido, invalido 1 bit, invalido multiplos)
 //   OBJ-03: formatos de instrucao RV32I executados pelo nucleo
-//   OBJ-05 (parte): cobertura cruzada validade de CRC x faixa de Tag ID
+//   OBJ-02: cobertura cruzada validade de CRC x faixa de Tag ID
 // A parte de IRQ (OBJ-04 e o cruzamento IRQ x instrucao) entra nas Fases
 // D/E junto com o IRQ Agent.
 class tb_coverage extends uvm_component;
@@ -28,7 +28,7 @@ class tb_coverage extends uvm_component;
     // concorrencia entre execucao/acesso a memoria e interrupcao (OBJ-05)
     protected bit irq_ativa;
 
-    // OBJ-01 / OBJ-02 / OBJ-05: amostrado a cada pacote concluido
+    // OBJ-01 / OBJ-02: amostrado a cada pacote concluido
     // (escrita de RESULT_STATUS), quando tag e crc sao conhecidos
     covergroup cg_pkt;
         option.per_instance = 1;

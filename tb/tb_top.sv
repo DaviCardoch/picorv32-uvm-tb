@@ -102,4 +102,73 @@ module tb_top;
         end
     end
 
+    // Injecao proposital nas demais assertivas do OBJ-06: a falha dura um
+    // ciclo, durante a primeira transferencia pendente, e e aplicada na borda
+    // de descida para que nucleo, driver, monitor e assertivas leiam o mesmo
+    // valor na borda de subida (nao faz parte da regressao normal):
+    //   +inject_valid_err: mem_valid cai antes de mem_ready (a_valid_estavel)
+    //   +inject_addr_err: mem_addr muda antes de mem_ready (a_addr_estavel)
+    // Em um reg, o release mantem o valor forcado, por isso o valor original
+    // e restaurado logo em seguida.
+    logic [31:0] addr_err_valor;
+
+    initial begin
+        if ($test$plusargs("inject_valid_err")) begin
+            wait (resetn);
+            @(posedge clk iff (mif.mem_valid && !mif.mem_ready));
+            @(negedge clk);
+            force dut.mem_valid = 1'b0;
+            @(negedge clk);
+            release dut.mem_valid;
+            dut.mem_valid = 1'b1;
+        end
+        else if ($test$plusargs("inject_addr_err")) begin
+            wait (resetn);
+            @(posedge clk iff (mif.mem_valid && !mif.mem_ready));
+            @(negedge clk);
+            addr_err_valor = dut.mem_addr;
+            force dut.mem_addr = addr_err_valor ^ 32'h4;
+            @(negedge clk);
+            release dut.mem_addr;
+            dut.mem_addr = addr_err_valor;
+        end
+    end
+
+    // Injecao proposital de falha em EOI, para demonstrar que as assertivas
+    // do OBJ-07 detectam o erro de fato. N e o numero de ciclos que a falha
+    // dura apos a busca de referencia, e so a primeira interrupcao e atingida
+    // (nao faz parte da regressao normal):
+    //   +inject_eoi_sobe=N: eoi fica em zero do pulso ate N ciclos apos a
+    //   busca no vetor (a_eoi_sobe deve disparar a partir de N=1)
+    //   +inject_eoi_encerra=N: eoi fica ativo ate N ciclos apos a busca de
+    //   retirq (a_eoi_encerra deve disparar a partir de N=4)
+    // Em um reg, o release mantem o valor forcado, por isso o valor correto
+    // e restaurado logo em seguida.
+    int unsigned eoi_err_ciclos;
+    logic [31:0] eoi_err_valor;
+
+    initial begin
+        if ($value$plusargs("inject_eoi_sobe=%d", eoi_err_ciclos)) begin
+            wait (resetn);
+            @(posedge clk iff (iif.irq != '0));
+            eoi_err_valor = iif.irq;
+            force dut.eoi = 32'h0;
+            @(posedge clk iff (mif.mem_valid && mif.mem_ready && mif.mem_instr
+                               && mif.mem_addr == 32'h0000_0010));
+            repeat (eoi_err_ciclos) @(posedge clk);
+            release dut.eoi;
+            dut.eoi = eoi_err_valor;
+        end
+        else if ($value$plusargs("inject_eoi_encerra=%d", eoi_err_ciclos)) begin
+            wait (resetn);
+            @(posedge clk iff (mif.mem_valid && mif.mem_ready && mif.mem_instr
+                               && mif.mem_rdata == 32'h0400_000B));
+            eoi_err_valor = dut.eoi;
+            force dut.eoi = eoi_err_valor;
+            repeat (eoi_err_ciclos) @(posedge clk);
+            release dut.eoi;
+            dut.eoi = 32'h0;
+        end
+    end
+
 endmodule : tb_top

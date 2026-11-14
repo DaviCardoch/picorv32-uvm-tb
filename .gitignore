@@ -22,3 +22,6 @@ sim/vc_hdrs.h
 sim/vfastLog/
 sim/*.conf
 sim/*.rc
+
+# capturas de tela feitas durante os testes iniciais
+sim/*.png
